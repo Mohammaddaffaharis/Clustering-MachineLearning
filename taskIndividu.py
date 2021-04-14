@@ -8,7 +8,7 @@ def readData():
     fileTrain = pd.read_csv('kendaraan_train.csv')
     fileTest = pd.read_csv('kendaraan_test.csv')
     return fileTrain,fileTest
-
+##PRE-PROCESSING
 def missingValuesHandler(file):
     '''
     Digunakan untuk mengisi cell yang bernilai null. Untuk Kolom Jenis_Kelamin,
@@ -36,7 +36,6 @@ def missingValuesHandler(file):
     file['Kanal_Penjualan'].fillna(modeKanalPenjualan[0], inplace=True)
     meanLamaBerlangganan = file['Lama_Berlangganan'].mean()
     file['Lama_Berlangganan'].fillna(meanLamaBerlangganan, inplace=True)
-
 def transformUmurKendaraan(file):
     '''
     jika umur kendaraan kurang dari satu tahun maka nilai cell akan dirubah menjadi 1
@@ -47,7 +46,6 @@ def transformUmurKendaraan(file):
     file['Umur_Kendaraan'] = file.Umur_Kendaraan.mask(file.Umur_Kendaraan == '1-2 Tahun', 0.5)
     file['Umur_Kendaraan'] = file.Umur_Kendaraan.mask(file.Umur_Kendaraan == '> 2 Tahun', 0)
     return file
-
 def transformJenisKelamin(file):
     '''                                                               isPria   isWanita
     Jika Jenis Kelamin Pria maka nilai cell akan dirubah menjadi   [    1    ,    0    ]
@@ -65,7 +63,6 @@ def transformJenisKelamin(file):
     file['isPria'] = pria
     file['isWanita'] = wanita
     return file
-
 def transformKendaraanRusak(file):
     '''
     Jika kendaraan tidak pernah rusak maka nilai cell akan dirubah menjadi 1
@@ -74,7 +71,6 @@ def transformKendaraanRusak(file):
     file['Kendaraan_Rusak'] = file.Kendaraan_Rusak.mask(file.Kendaraan_Rusak == 'Tidak', 1)
     file['Kendaraan_Rusak'] = file.Kendaraan_Rusak.mask(file.Kendaraan_Rusak == 'Pernah', 0)
     return file
-
 def scaling(file):
     """
     Melakukan Normalisasi menggunakan metode Min-Max Normalization. Karena Column Umur,
@@ -86,6 +82,9 @@ def scaling(file):
     file['Premi'] = (file['Premi'] - file['Premi'].min()) / (file['Premi'].max() - file['Premi'].min())
     file['Kanal_Penjualan'] = (file['Kanal_Penjualan'] - file['Kanal_Penjualan'].min()) / (file['Kanal_Penjualan'].max() - file['Kanal_Penjualan'].min())
     file['Lama_Berlangganan'] = (file['Lama_Berlangganan'] - file['Lama_Berlangganan'].min()) / (file['Lama_Berlangganan'].max() - file['Lama_Berlangganan'].min())
+
+def euclidian(x1,y1,x2,y2):
+    return math.sqrt(((x1 - x2) ** 2) + ((y1 - y2) ** 2))
 
 ########MAIN########
 tr,te = readData()
