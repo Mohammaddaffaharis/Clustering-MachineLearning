@@ -1,5 +1,5 @@
 import pandas as pd
-from math import sqrt
+from sklearn.decomposition import PCA
 
 def readData():
     '''
@@ -62,6 +62,7 @@ def transformJenisKelamin(file):
             wanita.append(1)
     file['isPria'] = pria
     file['isWanita'] = wanita
+    file.drop('Jenis_Kelamin', axis=1)
     return file
 def transformKendaraanRusak(file):
     '''
@@ -82,15 +83,31 @@ def scaling(file):
     file['Premi'] = (file['Premi'] - file['Premi'].min()) / (file['Premi'].max() - file['Premi'].min())
     file['Kanal_Penjualan'] = (file['Kanal_Penjualan'] - file['Kanal_Penjualan'].min()) / (file['Kanal_Penjualan'].max() - file['Kanal_Penjualan'].min())
     file['Lama_Berlangganan'] = (file['Lama_Berlangganan'] - file['Lama_Berlangganan'].min()) / (file['Lama_Berlangganan'].max() - file['Lama_Berlangganan'].min())
+def preProcessing(file):
+    missingValuesHandler(file)
+    transformKendaraanRusak(file)
+    transformJenisKelamin(file)
+    transformUmurKendaraan(file)
+    scaling(file)
+    file["Umur_Kendaraan"] = pd.to_numeric(file["Umur_Kendaraan"])
+    file["Kendaraan_Rusak"] = pd.to_numeric(file["Kendaraan_Rusak"])
+    newFile = pd.DataFrame(tr, columns=['isPria', 'isWanita', 'Umur', 'SIM', 'Kode_Daerah', 'Sudah_Asuransi',
+                                        'Umur_Kendaraan', 'Kendaraan_Rusak', 'Premi', 'Kanal_Penjualan',
+                                        'Lama_Berlangganan', 'Tertarik'])
+    return newFile
 
 def euclidian(x1,y1,x2,y2):
     return math.sqrt(((x1 - x2) ** 2) + ((y1 - y2) ** 2))
 
 ########MAIN########
 tr,te = readData()
-missingValuesHandler(tr)
-transformKendaraanRusak(tr)
-transformJenisKelamin(tr)
-transformUmurKendaraan(tr)
-scaling(tr)
-tr.to_csv('train.csv')
+dataframe = preProcessing(tr)
+dataframe.to_csv('DataAfterPreProcessing.csv')
+
+corr = dataframe.corr()
+corr.to_csv('FeatureSelection_CorrelationMatrix.csv')
+
+pca = PCA(n_components=2)
+principal_components = pca.fit_transform(dataframe)
+principal_df = pd.DataFrame(data = principal_components)
+principal_df.to_csv('DimensionalityReduction_PCA.csv')
