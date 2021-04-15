@@ -1,4 +1,5 @@
 import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 
 def readData():
@@ -106,8 +107,12 @@ dataframe.to_csv('DataAfterPreProcessing.csv')
 
 corr = dataframe.corr()
 corr.to_csv('FeatureSelection_CorrelationMatrix.csv')
+plt.scatter(dataframe['Umur'], dataframe['Premi'])
+plt.show()
 
 pca = PCA(n_components=2)
 principal_components = pca.fit_transform(dataframe)
 principal_df = pd.DataFrame(data = principal_components)
 principal_df.to_csv('DimensionalityReduction_PCA.csv')
+plt.scatter(principal_df[0], principal_df[1])
+plt.show()
