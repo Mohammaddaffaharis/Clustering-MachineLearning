@@ -1,6 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
+import numpy as np
+import math
 
 def readData():
     '''
@@ -39,13 +41,13 @@ def missingValuesHandler(file):
     file['Lama_Berlangganan'].fillna(meanLamaBerlangganan, inplace=True)
 def transformUmurKendaraan(file):
     '''
-    jika umur kendaraan kurang dari satu tahun maka nilai cell akan dirubah menjadi 1
-    jika umur kendaraan lebih dari satu tahun dan kurang dari dua tahun maka nilai cell akan dirubah menjadi 0.5
-    jika umur kendaraan lebih dari dua tahun maka nilai cell akan dirubah menjadi 0
+    jika umur kendaraan kurang dari satu tahun maka nilai cell akan dirubah menjadi 3
+    jika umur kendaraan lebih dari satu tahun dan kurang dari dua tahun maka nilai cell akan dirubah menjadi 2
+    jika umur kendaraan lebih dari dua tahun maka nilai cell akan dirubah menjadi 1
     '''
-    file['Umur_Kendaraan'] = file.Umur_Kendaraan.mask(file.Umur_Kendaraan == '< 1 Tahun', 1)
-    file['Umur_Kendaraan'] = file.Umur_Kendaraan.mask(file.Umur_Kendaraan == '1-2 Tahun', 0.5)
-    file['Umur_Kendaraan'] = file.Umur_Kendaraan.mask(file.Umur_Kendaraan == '> 2 Tahun', 0)
+    file['Umur_Kendaraan'] = file.Umur_Kendaraan.mask(file.Umur_Kendaraan == '< 1 Tahun', 3)
+    file['Umur_Kendaraan'] = file.Umur_Kendaraan.mask(file.Umur_Kendaraan == '1-2 Tahun', 2)
+    file['Umur_Kendaraan'] = file.Umur_Kendaraan.mask(file.Umur_Kendaraan == '> 2 Tahun', 1)
     return file
 def transformJenisKelamin(file):
     '''                                                               isPria   isWanita
@@ -76,43 +78,83 @@ def transformKendaraanRusak(file):
 def scaling(file):
     """
     Melakukan Normalisasi menggunakan metode Min-Max Normalization. Karena Column Umur,
-    Kode_Daerah, Premi, Kanal_Penjualan, dan Lama_Berlangganan belum berada di range
+    Kode_Daerah, Umur_Kendaraan, Premi, Kanal_Penjualan, dan Lama_Berlangganan belum berada di range
     antara 0 s/d 1 maka perlu discaling terlebih dahulu.
     """
     file['Umur'] = (file['Umur']-file['Umur'].min())/(file['Umur'].max()-file['Umur'].min())
     file['Kode_Daerah'] = (file['Kode_Daerah'] - file['Kode_Daerah'].min()) / (file['Kode_Daerah'].max() - file['Kode_Daerah'].min())
+    file['Umur_Kendaraan'] = (file['Umur_Kendaraan'] - file['Umur_Kendaraan'].min()) / (file['Umur_Kendaraan'].max() - file['Umur_Kendaraan'].min())
     file['Premi'] = (file['Premi'] - file['Premi'].min()) / (file['Premi'].max() - file['Premi'].min())
     file['Kanal_Penjualan'] = (file['Kanal_Penjualan'] - file['Kanal_Penjualan'].min()) / (file['Kanal_Penjualan'].max() - file['Kanal_Penjualan'].min())
     file['Lama_Berlangganan'] = (file['Lama_Berlangganan'] - file['Lama_Berlangganan'].min()) / (file['Lama_Berlangganan'].max() - file['Lama_Berlangganan'].min())
 def preProcessing(file):
+    #panggil fungsi pre-processing yang sudah dibuat sebelumnya
     missingValuesHandler(file)
     transformKendaraanRusak(file)
     transformJenisKelamin(file)
     transformUmurKendaraan(file)
     scaling(file)
+    #convert feature Umur_Kedaraan dan Kendaraan_Rusak menjadi float
     file["Umur_Kendaraan"] = pd.to_numeric(file["Umur_Kendaraan"])
     file["Kendaraan_Rusak"] = pd.to_numeric(file["Kendaraan_Rusak"])
-    newFile = pd.DataFrame(tr, columns=['isPria', 'isWanita', 'Umur', 'SIM', 'Kode_Daerah', 'Sudah_Asuransi',
+    #membuat dataframe baru berdasarkan proses preprocessing yang telah dibuat
+    newFile = pd.DataFrame(file, columns=['isPria', 'isWanita', 'Umur', 'SIM', 'Kode_Daerah', 'Sudah_Asuransi',
                                         'Umur_Kendaraan', 'Kendaraan_Rusak', 'Premi', 'Kanal_Penjualan',
-                                        'Lama_Berlangganan', 'Tertarik'])
-    return newFile
+                                        'Lama_Berlangganan'])
+    #Dimensionality Reduction
+    pca = PCA(n_components=2)
+    principal_components = pca.fit_transform(newFile)
+    principal_df = pd.DataFrame(data=principal_components)
+    return principal_df
 
 def euclidian(x1,y1,x2,y2):
     return math.sqrt(((x1 - x2) ** 2) + ((y1 - y2) ** 2))
+def initialCentroid(k):
+    cent = {
+        i + 1: [np.random.uniform(-2, 2), np.random.uniform(-2, 2)]
+        for i in range(k)
+    }
+    return cent
+def assignNodeToCentroid(file, cent):
+    #melakukan perhitungan jarak untuk setiap titik terhadap setiap centroid
+    for i in cent.keys():
+        arr = []
+        for index, row in file.iterrows():
+            arr.append(euclidian(row[0], row[1], cent[i][0], cent[i][1]))
+        file['Jarak_Dari_Centroid{}'.format(i)] = arr
+    #melakukan listing terhadap kolom jarak centroid ke titik
+    colJarakTitikCentroid = []
+    for i in cent.keys():
+        colJarakTitikCentroid.append('Jarak_Dari_Centroid{}'.format(i))
+    #mencari centroid terdekat ke titik
+    file['Centroid_Terdekat'] = file.loc[:, colJarakTitikCentroid].idxmin(axis=1)
+    file['Centroid_Terdekat'] = file['Centroid_Terdekat'].map(lambda x: int(x.lstrip('Jarak_Dari_Centroid')))
+    return file
+def updateCentroid(file,cent):
+    for i in cent.keys():
+        cent[i][0] = np.mean(file[file['Centroid_Terdekat'] == i][0])
+        cent[i][1] = np.mean(file[file['Centroid_Terdekat'] == i][1])
+    return cent
 
 ########MAIN########
 tr,te = readData()
-dataframe = preProcessing(tr)
+dataframe = preProcessing(te)
+plt.scatter(dataframe[0], dataframe[1])
+
 dataframe.to_csv('DataAfterPreProcessing.csv')
 
-corr = dataframe.corr()
-corr.to_csv('FeatureSelection_CorrelationMatrix.csv')
-plt.scatter(dataframe['Umur'], dataframe['Premi'])
+k = 4
+cent = initialCentroid(k)
+dataframe = assignNodeToCentroid(dataframe, cent)
+dataframe.to_csv('it1.csv')
+while True:
+    closest_centroids = dataframe['Centroid_Terdekat'].copy(deep=True)
+    cent = updateCentroid(dataframe,cent)
+    dataframe = assignNodeToCentroid(dataframe, cent)
+    if closest_centroids.equals(dataframe['Centroid_Terdekat']):
+        break
+print(cent)
+for i in range(k):
+    plt.scatter(cent[i+1][0], cent[i+1][0], color='Red')
 plt.show()
-
-pca = PCA(n_components=2)
-principal_components = pca.fit_transform(dataframe)
-principal_df = pd.DataFrame(data = principal_components)
-principal_df.to_csv('DimensionalityReduction_PCA.csv')
-plt.scatter(principal_df[0], principal_df[1])
-plt.show()
+dataframe.to_csv('DataAfterClustering.csv')
