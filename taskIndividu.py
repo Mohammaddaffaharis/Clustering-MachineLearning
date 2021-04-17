@@ -65,15 +65,23 @@ def transformJenisKelamin(file):
             wanita.append(1)
     file['isPria'] = pria
     file['isWanita'] = wanita
-    file.drop('Jenis_Kelamin', axis=1)
     return file
 def transformKendaraanRusak(file):
+    '''                                                              isRusak  isTidakRusak
+    Jika Jenis Kelamin Pria maka nilai cell akan dirubah menjadi   [    1    ,    0    ]
+    Jika Jenis Kelamin Wanita maka nilai cell akan dirubah menjadi [    0    ,    1    ]
     '''
-    Jika kendaraan tidak pernah rusak maka nilai cell akan dirubah menjadi 1
-    Jika kendaraan pernah rusak maka nilai cell akan dirubah menjadi 0
-    '''
-    file['Kendaraan_Rusak'] = file.Kendaraan_Rusak.mask(file.Kendaraan_Rusak == 'Tidak', 1)
-    file['Kendaraan_Rusak'] = file.Kendaraan_Rusak.mask(file.Kendaraan_Rusak == 'Pernah', 0)
+    rusak = []
+    tidak = []
+    for index, row in file.iterrows():
+        if row['Kendaraan_Rusak'] == 'Tidak':
+            tidak.append(1)
+            rusak.append(0)
+        else:
+            tidak.append(0)
+            rusak.append(1)
+    file['isRusak'] = rusak
+    file['isTidakRusak'] = tidak
     return file
 def scaling(file):
     """
@@ -94,13 +102,13 @@ def preProcessing(file):
     transformJenisKelamin(file)
     transformUmurKendaraan(file)
     scaling(file)
-    #convert feature Umur_Kedaraan dan Kendaraan_Rusak menjadi float
+    #convert feature Umur_Kedaraan menjadi float
     file["Umur_Kendaraan"] = pd.to_numeric(file["Umur_Kendaraan"])
-    file["Kendaraan_Rusak"] = pd.to_numeric(file["Kendaraan_Rusak"])
     #membuat dataframe baru berdasarkan proses preprocessing yang telah dibuat
-    newFile = pd.DataFrame(file, columns=['isPria', 'isWanita', 'Umur', 'Kode_Daerah', 'Sudah_Asuransi',
-                                        'Umur_Kendaraan', 'Kendaraan_Rusak', 'Premi', 'Kanal_Penjualan',
+    newFile = pd.DataFrame(file, columns=['isPria', 'Umur', 'Kode_Daerah', 'Sudah_Asuransi',
+                                        'Umur_Kendaraan', 'isRusak', 'Kanal_Penjualan',
                                         'Lama_Berlangganan'])
+    newFile.to_csv('test.csv')
     #Dimensionality Reduction
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(newFile)
@@ -111,7 +119,7 @@ def euclidian(x1,y1,x2,y2):
     return math.sqrt(((x1 - x2) ** 2) + ((y1 - y2) ** 2))
 def initialCentroid(k):
     cent = {
-        i + 1: [np.random.uniform(-2, 2), np.random.uniform(-2, 2)]
+        i + 1: [np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)]
         for i in range(k)
     }
     return cent
@@ -141,12 +149,21 @@ def updateCentroid(file,cent):
 tr,te = readData()
 dataframe = preProcessing(te)
 dataframe.to_csv('DataAfterPreProcessing.csv')
+plt.scatter(dataframe[0], dataframe[1],color='red', alpha=0.5, s=1.5)
+plt.title('Data After Pre-Processing')
+plt.xlabel('X Axis')
+plt.ylabel('Y Axis')
+plt.show()
 
 k = 2
-colmap = {1: 'blue', 2: 'green', 3: 'purple', 4:'red', 5:'orange', 6:'pink'}
+colmap = {1: '#9e2828', 2: '#289e37', 3: '#28439e', 4: '#29fff8', 5: '#ffa600', 6: '#ffff00', 7: '#e100ff', 8:'#787878'}
 cent = initialCentroid(k)
 dataframe = assignNodeToCentroid(dataframe, cent, colmap)
 dataframe.to_csv('it1.csv')
+plt.scatter(dataframe[0], dataframe[1], color=dataframe['Color'], alpha=0.5, s=1.5)
+for i in range(k):
+    plt.scatter(cent[i+1][0], cent[i+1][1], color=colmap[i+1],marker='X',s=40,edgecolors='k')
+plt.show()
 while True:
     closest_centroids = dataframe['Centroid_Terdekat'].copy(deep=True)
     cent = updateCentroid(dataframe,cent)
@@ -154,9 +171,11 @@ while True:
     if closest_centroids.equals(dataframe['Centroid_Terdekat']):
         break
 print(cent)
-plt.scatter(dataframe[0], dataframe[1], color=dataframe['Color'], alpha=0.2)
+plt.scatter(dataframe[0], dataframe[1], color=dataframe['Color'], alpha=0.5, s=1.5)
+plt.title('Data After Clustering')
+plt.xlabel('X Axis')
+plt.ylabel('Y Axis')
 for i in range(k):
-    plt.scatter(cent[i+1][0], cent[i+1][1], color=colmap[i+1])
-    plt.text(cent[i + 1][0], cent[i + 1][1], i+1, fontdict=dict(color=colmap[i + 1]))
+    plt.scatter(cent[i+1][0], cent[i+1][1], color=colmap[i+1],marker='X',s=40,edgecolors='k')
 plt.show()
 dataframe.to_csv('DataAfterClustering.csv')
