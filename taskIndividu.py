@@ -98,7 +98,7 @@ def preProcessing(file):
     file["Umur_Kendaraan"] = pd.to_numeric(file["Umur_Kendaraan"])
     file["Kendaraan_Rusak"] = pd.to_numeric(file["Kendaraan_Rusak"])
     #membuat dataframe baru berdasarkan proses preprocessing yang telah dibuat
-    newFile = pd.DataFrame(file, columns=['isPria', 'isWanita', 'Umur', 'SIM', 'Kode_Daerah', 'Sudah_Asuransi',
+    newFile = pd.DataFrame(file, columns=['isPria', 'isWanita', 'Umur', 'Kode_Daerah', 'Sudah_Asuransi',
                                         'Umur_Kendaraan', 'Kendaraan_Rusak', 'Premi', 'Kanal_Penjualan',
                                         'Lama_Berlangganan'])
     #Dimensionality Reduction
@@ -115,7 +115,7 @@ def initialCentroid(k):
         for i in range(k)
     }
     return cent
-def assignNodeToCentroid(file, cent):
+def assignNodeToCentroid(file, cent, colmap):
     #melakukan perhitungan jarak untuk setiap titik terhadap setiap centroid
     for i in cent.keys():
         arr = []
@@ -129,6 +129,7 @@ def assignNodeToCentroid(file, cent):
     #mencari centroid terdekat ke titik
     file['Centroid_Terdekat'] = file.loc[:, colJarakTitikCentroid].idxmin(axis=1)
     file['Centroid_Terdekat'] = file['Centroid_Terdekat'].map(lambda x: int(x.lstrip('Jarak_Dari_Centroid')))
+    file['Color'] = file['Centroid_Terdekat'].map(lambda x: colmap[x])
     return file
 def updateCentroid(file,cent):
     for i in cent.keys():
@@ -139,22 +140,23 @@ def updateCentroid(file,cent):
 ########MAIN########
 tr,te = readData()
 dataframe = preProcessing(te)
-plt.scatter(dataframe[0], dataframe[1])
-
 dataframe.to_csv('DataAfterPreProcessing.csv')
 
-k = 4
+k = 2
+colmap = {1: 'blue', 2: 'green', 3: 'purple', 4:'red', 5:'orange', 6:'pink'}
 cent = initialCentroid(k)
-dataframe = assignNodeToCentroid(dataframe, cent)
+dataframe = assignNodeToCentroid(dataframe, cent, colmap)
 dataframe.to_csv('it1.csv')
 while True:
     closest_centroids = dataframe['Centroid_Terdekat'].copy(deep=True)
     cent = updateCentroid(dataframe,cent)
-    dataframe = assignNodeToCentroid(dataframe, cent)
+    dataframe = assignNodeToCentroid(dataframe, cent, colmap)
     if closest_centroids.equals(dataframe['Centroid_Terdekat']):
         break
 print(cent)
+plt.scatter(dataframe[0], dataframe[1], color=dataframe['Color'], alpha=0.2)
 for i in range(k):
-    plt.scatter(cent[i+1][0], cent[i+1][0], color='Red')
+    plt.scatter(cent[i+1][0], cent[i+1][1], color=colmap[i+1])
+    plt.text(cent[i + 1][0], cent[i + 1][1], i+1, fontdict=dict(color=colmap[i + 1]))
 plt.show()
 dataframe.to_csv('DataAfterClustering.csv')
