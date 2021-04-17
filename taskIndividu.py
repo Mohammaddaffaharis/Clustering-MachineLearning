@@ -108,7 +108,6 @@ def preProcessing(file):
     newFile = pd.DataFrame(file, columns=['isPria', 'Umur', 'Kode_Daerah', 'Sudah_Asuransi',
                                         'Umur_Kendaraan', 'isRusak', 'Kanal_Penjualan',
                                         'Lama_Berlangganan'])
-    newFile.to_csv('test.csv')
     #Dimensionality Reduction
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(newFile)
@@ -159,11 +158,6 @@ k = 2
 colmap = {1: '#9e2828', 2: '#289e37', 3: '#28439e', 4: '#29fff8', 5: '#ffa600', 6: '#ffff00', 7: '#e100ff', 8:'#787878'}
 cent = initialCentroid(k)
 dataframe = assignNodeToCentroid(dataframe, cent, colmap)
-dataframe.to_csv('it1.csv')
-plt.scatter(dataframe[0], dataframe[1], color=dataframe['Color'], alpha=0.5, s=1.5)
-for i in range(k):
-    plt.scatter(cent[i+1][0], cent[i+1][1], color=colmap[i+1],marker='X',s=40,edgecolors='k')
-plt.show()
 while True:
     closest_centroids = dataframe['Centroid_Terdekat'].copy(deep=True)
     cent = updateCentroid(dataframe,cent)
