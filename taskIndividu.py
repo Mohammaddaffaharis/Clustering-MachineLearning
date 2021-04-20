@@ -102,6 +102,7 @@ def preProcessing(file):
     transformJenisKelamin(file)
     transformUmurKendaraan(file)
     scaling(file)
+    x = file.describe()
     #convert feature Umur_Kedaraan menjadi float
     file["Umur_Kendaraan"] = pd.to_numeric(file["Umur_Kendaraan"])
     #membuat dataframe baru berdasarkan proses preprocessing yang telah dibuat
@@ -110,9 +111,9 @@ def preProcessing(file):
                                         'Lama_Berlangganan'])
     #Dimensionality Reduction
     pca = PCA(n_components=2)
-    principal_components = pca.fit_transform(newFile)
-    principal_df = pd.DataFrame(data=principal_components)
-    return principal_df
+    components = pca.fit_transform(newFile)
+    newDataframe = pd.DataFrame(data=components)
+    return newDataframe
 
 def euclidian(x1,y1,x2,y2):
     return math.sqrt(((x1 - x2) ** 2) + ((y1 - y2) ** 2))
@@ -143,10 +144,9 @@ def updateCentroid(file,cent):
         cent[i][0] = np.mean(file[file['Centroid_Terdekat'] == i][0])
         cent[i][1] = np.mean(file[file['Centroid_Terdekat'] == i][1])
     return cent
-
 ########MAIN########
 tr,te = readData()
-dataframe = preProcessing(te)
+dataframe = preProcessing(tr)
 dataframe.to_csv('DataAfterPreProcessing.csv')
 plt.scatter(dataframe[0], dataframe[1],color='red', alpha=0.5, s=1.5)
 plt.title('Data After Pre-Processing')
@@ -155,21 +155,22 @@ plt.ylabel('Y Axis')
 plt.show()
 
 k = 2
-colmap = {1: '#9e2828', 2: '#289e37', 3: '#28439e', 4: '#29fff8', 5: '#ffa600', 6: '#ffff00', 7: '#e100ff', 8:'#787878'}
-cent = initialCentroid(k)
-dataframe = assignNodeToCentroid(dataframe, cent, colmap)
+colorLibrary = {1: '#9e2828', 2: '#289e37', 3: '#28439e', 4: '#29fff8', 5: '#ffa600', 6: '#ffff00', 7: '#e100ff', 8: '#787878'}
+centroid = initialCentroid(k)
+dataframe = assignNodeToCentroid(dataframe, centroid, colorLibrary)
 while True:
     closest_centroids = dataframe['Centroid_Terdekat'].copy(deep=True)
-    cent = updateCentroid(dataframe,cent)
-    dataframe = assignNodeToCentroid(dataframe, cent, colmap)
+    centroid = updateCentroid(dataframe, centroid)
+    dataframe = assignNodeToCentroid(dataframe, centroid, colorLibrary)
     if closest_centroids.equals(dataframe['Centroid_Terdekat']):
         break
-print(cent)
+print(centroid)
+print(dataframe.groupby('Centroid_Terdekat').count())
 plt.scatter(dataframe[0], dataframe[1], color=dataframe['Color'], alpha=0.5, s=1.5)
 plt.title('Data After Clustering')
 plt.xlabel('X Axis')
 plt.ylabel('Y Axis')
 for i in range(k):
-    plt.scatter(cent[i+1][0], cent[i+1][1], color=colmap[i+1],marker='X',s=40,edgecolors='k')
+    plt.scatter(centroid[i + 1][0], centroid[i + 1][1], color=colorLibrary[i + 1], marker='X', s=40, edgecolors='k')
 plt.show()
 dataframe.to_csv('DataAfterClustering.csv')
